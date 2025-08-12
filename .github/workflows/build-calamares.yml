@@ -25,7 +25,7 @@ jobs:
             qml-module-qtquick-layouts qml-module-qtquick-window2 qml-module-qtgraphicaleffects \
             libkf5config-dev libkf5coreaddons-dev libkf5i18n-dev libkf5iconthemes-dev \
             libkf5parts-dev libkf5service-dev libkf5solid-dev libkf5plasma-dev \
-            libkf5crash-dev libkf5package-dev libkf5notifications-dev libkf5networkmanager-dev \
+            libkf5crash-dev libkf5package-dev libkf5notifications-dev \
             libpolkit-qt5-1-dev libyaml-cpp-dev libboost-all-dev \
             python3-dev python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtquick python3-yaml \
             libappstreamqt-dev libpwquality-dev libnm-dev libcryptsetup-dev libparted-dev \
