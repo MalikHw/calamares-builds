@@ -1,4 +1,4 @@
-name: Build Calamares (almost gave the fuck up lmao)
+name: Build Calamares (old one was 6mb so fuck it💀)
 
 on:
   workflow_dispatch:
@@ -68,7 +68,22 @@ jobs:
       - name: Package install directory with submodules
         run: |
           export INSTALL_DIR="/tmp/calamares-install"
+          
+          # Debug: Show what's actually installed
+          echo "=== Install directory contents ==="
+          find "$INSTALL_DIR" -type f | head -50
+          echo "=== Install directory size breakdown ==="
+          du -sh "$INSTALL_DIR"/* || true
+          echo "=== Modules directory ==="
+          find "$INSTALL_DIR" -name "modules" -type d || true
+          echo "=== Calamares binary ==="
+          find "$INSTALL_DIR" -name "calamares" -type f || true
+          
+          # Create archive
           tar -czf calamares-full-${{ env.DATE_TAG }}.tar.gz -C "$INSTALL_DIR" .
+          
+          echo "=== Final archive size ==="
+          ls -lh calamares-full-${{ env.DATE_TAG }}.tar.gz
 
       - name: Create build info file
         run: |
