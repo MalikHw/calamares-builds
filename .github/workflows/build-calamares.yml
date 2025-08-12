@@ -1,4 +1,4 @@
-name: Build Calamares (Full Qt6 Build)
+name: Build Calamares (Full Qt5 Build)
 
 on:
   workflow_dispatch:
@@ -15,19 +15,19 @@ jobs:
           echo "DATE_TAG=$(date +'%Y-%m-%d_%H-%M-%S')" >> $GITHUB_ENV
           echo "DATE_TITLE=$(date +'%Y-%m-%d %H:%M:%S GMT+1')" >> $GITHUB_ENV
 
-      - name: Install dependencies (Full Qt6 + KDE)
+      - name: Install dependencies (Full Qt5 + KDE)
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             git cmake ninja-build extra-cmake-modules gettext pkg-config \
-            qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-l10n-tools libqt6svg6-dev \
-            qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-controls2 \
-            qml6-module-qtquick-layouts qml6-module-qtquick-window \
-            libkf6config-dev libkf6coreaddons-dev libkf6i18n-dev libkf6iconthemes-dev \
-            libkf6parts-dev libkf6service-dev libkf6solid-dev libkf6plasma-dev \
-            libkf6crash-dev libkf6package-dev libkf6notifications-dev libkf6networkmanager-qt-dev \
-            libpolkit-qt6-1-dev libyaml-cpp-dev libboost-all-dev \
-            python3-dev python3-pyqt6 python3-pyqt6.qtsvg python3-pyqt6.qtquick python3-yaml \
+            qtbase5-dev qtdeclarative5-dev qttools5-dev qttools5-dev-tools \
+            qml-module-qtquick-controls qml-module-qtquick-controls2 \
+            qml-module-qtquick-layouts qml-module-qtquick-window2 qml-module-qtgraphicaleffects \
+            libkf5config-dev libkf5coreaddons-dev libkf5i18n-dev libkf5iconthemes-dev \
+            libkf5parts-dev libkf5service-dev libkf5solid-dev libkf5plasma-dev \
+            libkf5crash-dev libkf5package-dev libkf5notifications-dev libkf5networkmanager-dev \
+            libpolkit-qt5-1-dev libyaml-cpp-dev libboost-all-dev \
+            python3-dev python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtquick python3-yaml \
             libappstreamqt-dev libpwquality-dev libnm-dev libcryptsetup-dev libparted-dev \
             os-prober rsync squashfs-tools dosfstools e2fsprogs btrfs-progs xfsprogs \
             f2fs-tools jfsutils reiserfsprogs nilfs-tools udftools
@@ -35,13 +35,13 @@ jobs:
       - name: Clone Calamares from Codeberg
         run: git clone --recursive https://codeberg.org/calamares/calamares.git
 
-      - name: Build & install Calamares (Qt6 Full)
+      - name: Build & install Calamares (Qt5 Full)
         run: |
           cd calamares
           mkdir build && cd build
           cmake -G Ninja \
             -DWITH_ALL_MODULES=ON \
-            -DWITH_QT6=ON \
+            -DWITH_QT6=OFF \
             -DWITH_PYTHON=ON \
             -DWITH_PYBIND11=ON \
             -DWITH_QML=ON \
@@ -63,7 +63,7 @@ jobs:
         with:
           tag_name: ${{ env.DATE_TAG }}
           name: "${{ env.DATE_TITLE }} build"
-          body: "Automated full-featured Qt6 Calamares build"
+          body: "Automated full-featured Qt5 Calamares build"
           files: calamares-${{ env.DATE_TAG }}.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
