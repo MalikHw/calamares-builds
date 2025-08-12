@@ -1,4 +1,4 @@
-name: Ultimate Calamares Build (Full Recursive)
+libqt5webengine5-dev5webengine5-dev Ultimate Calamares Build (Full Recursive)
 
 on:
   push:
@@ -27,7 +27,7 @@ jobs:
           python3-dev python3-pip libyaml-cpp-dev libkpmcore-dev \
           libappstreamqt-dev libpwquality-dev libparted-dev \
           libcryptsetup-dev libatasmart-dev libboost-python-dev \
-          libpolkit-qt5-1-dev libqt5svg5-dev libqt5webengine5-dev \
+          libpolkit-qt5-1-dev libqt5svg5-dev \
           qml-module-qtquick2 qml-module-qtquick-controls \
           os-prober rsync squashfs-tools dosfstools e2fsprogs \
           btrfs-progs xfsprogs f2fs-tools jfsutils reiserfsprogs \
