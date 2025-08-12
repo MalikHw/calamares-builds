@@ -1,4 +1,4 @@
-name: Build Calamares
+name: Build Calamares (Full Qt6 Build)
 
 on:
   workflow_dispatch:
@@ -15,17 +15,43 @@ jobs:
           echo "DATE_TAG=$(date +'%Y-%m-%d_%H-%M-%S')" >> $GITHUB_ENV
           echo "DATE_TITLE=$(date +'%Y-%m-%d %H:%M:%S GMT+1')" >> $GITHUB_ENV
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y git cmake ninja-build extra-cmake-modules qtbase5-dev qtdeclarative5-dev qml-module-qtquick-controls qml-module-qtquick-controls2 qml-module-qtquick-layouts qml-module-qtquick2 libkf5i18n-dev libkf5config-dev libkf5coreaddons-dev libkf5crash-dev libkf5parts-dev libkf5networkmanagerqt-dev libpolkit-agent-1-dev libpolkit-qt5-1-dev libyaml-cpp-dev libparted-dev libboost-all-dev python3-dev python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtquick python3-yaml libqt5svg5-dev squashfs-tools libkf5package-dev libarchive-dev
+      - name: Install dependencies (Full Qt6 + KDE)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git cmake ninja-build extra-cmake-modules gettext pkg-config \
+            qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-l10n-tools libqt6svg6-dev \
+            qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-controls2 \
+            qml6-module-qtquick-layouts qml6-module-qtquick-window \
+            libkf6config-dev libkf6coreaddons-dev libkf6i18n-dev libkf6iconthemes-dev \
+            libkf6parts-dev libkf6service-dev libkf6solid-dev libkf6plasma-dev \
+            libkf6crash-dev libkf6package-dev libkf6notifications-dev libkf6networkmanager-qt-dev \
+            libpolkit-qt6-1-dev libyaml-cpp-dev libboost-all-dev \
+            python3-dev python3-pyqt6 python3-pyqt6.qtsvg python3-pyqt6.qtquick python3-yaml \
+            libappstreamqt-dev libpwquality-dev libnm-dev libcryptsetup-dev libparted-dev \
+            os-prober rsync squashfs-tools dosfstools e2fsprogs btrfs-progs xfsprogs \
+            f2fs-tools jfsutils reiserfsprogs nilfs-tools udftools
 
       - name: Clone Calamares from Codeberg
         run: git clone --recursive https://codeberg.org/calamares/calamares.git
 
-      - name: Build & install Calamares
+      - name: Build & install Calamares (Qt6 Full)
         run: |
           cd calamares
           mkdir build && cd build
-          cmake -G Ninja -DWITH_ALL_MODULES=ON -DCMAKE_INSTALL_PREFIX=/tmp/calamares ..
+          cmake -G Ninja \
+            -DWITH_ALL_MODULES=ON \
+            -DWITH_QT6=ON \
+            -DWITH_PYTHON=ON \
+            -DWITH_PYBIND11=ON \
+            -DWITH_QML=ON \
+            -DINSTALL_CONFIG=ON \
+            -DINSTALL_POLKIT=ON \
+            -DBUILD_CRASH_REPORTING=ON \
+            -DBUILD_SCHEMA_TESTING=ON \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/tmp/calamares \
+            ..
           ninja
           ninja install
 
@@ -37,7 +63,7 @@ jobs:
         with:
           tag_name: ${{ env.DATE_TAG }}
           name: "${{ env.DATE_TITLE }} build"
-          body: "Automated build"
+          body: "Automated full-featured Qt6 Calamares build"
           files: calamares-${{ env.DATE_TAG }}.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
