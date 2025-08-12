@@ -1,120 +1,47 @@
-name: Ultimate Calamares Build (Fixed Deps)
+name: Build Calamares
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-  install_deps:
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-    - name: Configure Ubuntu repositories
-      run: |
-        # First make sure basic system is configured
-        sudo apt-get update -y
-        sudo apt-get install -y --no-install-recommends software-properties-common
-        sudo add-apt-repository main
-        sudo add-apt-repository universe
-        sudo add-apt-repository multiverse
-        sudo add-apt-repository restricted
-        sudo apt-get update -y
-
-    - name: Install build tools (the real way)
-      run: |
-        sudo apt-get install -y --install-recommends --install-suggests \
-          gcc \
-          g++ \
-          libc6-dev \
-          dpkg-dev \
-          # These together replace build-essential
-          cmake \
-          ninja-build \
-          git \
-          pkg-config \
-          gettext
-
-    - name: Install Qt5 and KDE dependencies
-      run: |
-        sudo apt-get install -y --install-recommends --install-suggests \
-          qtbase5-dev \
-          qttools5-dev \
-          qtdeclarative5-dev \
-          qt5-qmake \
-          qt5-default \
-          libqt5webengine5 \
-          libqt5webenginecore5 \
-          libqt5webenginewidgets5 \
-          libkf5config-dev \
-          libkf5coreaddons-dev \
-          libkf5i18n-dev
-
-    - name: Install system libraries
-      run: |
-        sudo apt-get install -y --install-recommends --install-suggests \
-          python3-dev \
-          libyaml-cpp-dev \
-          libkpmcore-dev \
-          libparted-dev \
-          libcryptsetup-dev
-
-    - name: Install Python packages
-      run: |
-        python -m pip install --upgrade pip
-        pip install \
-          pyyaml \
-          jsonschema \
-          requests \
-          distro \
-          pybind11
-
-  clone:
-    needs: install_deps
-    runs-on: ubuntu-latest
-    steps:
-    - name: Full recursive clone
-      run: |
-        git clone --recursive https://codeberg.org/calamares/calamares.git
-        cd calamares
-        git submodule update --init --recursive
-        echo "CALAMARES_VERSION=$(git describe --tags --always)" >> $GITHUB_ENV
-        echo "CALAMARES_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-
   build:
-    needs: clone
     runs-on: ubuntu-latest
     steps:
-    - name: Configure and build
-      run: |
-        cd calamares
-        mkdir build
-        cd build
-        cmake -GNinja .. \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DQT_MAJOR_VERSION=5 \
-          -DWITH_PYTHONQT=ON \
-          -DWITH_QML=ON
-        ninja -j$(nproc)
+      - name: Get current date
+        id: get_date
+        run: echo "DATE_TAG=$(date -u +'%Y-%m-%d_%H-%M-%S')" >> $GITHUB_ENV
 
-  package:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-    - name: Create package
-      run: |
-        cd calamares/build
-        DESTDIR=/tmp/calamares-pkg ninja install
-        tar -czvf /tmp/calamares.tar.gz -C /tmp/calamares-pkg .
-    
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: calamares-build
-        path: /tmp/calamares.tar.gz
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y cmake extra-cmake-modules qtbase5-dev qtdeclarative5-dev qml-module-qtquick-controls qml-module-qtquick-controls2 qml-module-qtquick-layouts qml-module-qtquick2 libkf5coreaddons-dev libkf5i18n-dev libkf5config-dev libkf5configwidgets-dev libkf5kcmutils-dev libkf5solid-dev libkf5service-dev libyaml-cpp-dev libboost-all-dev libparted-dev libmount-dev libblkid-dev libpolkit-agent-1-dev libpolkit-qt5-1-dev libpolkit-gobject-1-dev libx11-dev libxt-dev libxext-dev libxrender-dev libxi-dev libxcb1-dev libxcb-util-dev libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev libxcb-glx0-dev libxcb-xinerama0-dev libxcb-dpms0-dev libxcb-dri2-0-dev libxcb-dri3-dev libxcb-present-dev libxcb-composite0-dev libdrm-dev libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev libqt5svg5-dev libkf5crash-dev libkf5doctools-dev gettext
+
+      - name: Configure with CMake (Ninja)
+        run: mkdir build && cd build && cmake -G Ninja -DWITH_QML=ON -DWITH_PYTHON=ON -DWITH_PYTHONQT=ON -DWITH_KF5Crash=ON -DWITH_PARTITIONMANAGER=ON -DWITH_NETWORK=ON -DWITH_WEBVIEW=ON -DWITH_BOOTLOADER=ON -DWITH_LOCALE=ON -DWITH_SQUASHFS=ON -DWITH_UEFI=ON ..
+
+      - name: Build with Ninja
+        run: cd build && ninja
+
+      - name: Package build
+        run: cd build && tar -czvf ../calamares_${{ env.DATE_TAG }}.tar.gz .
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.DATE_TAG }}
+          release_name: ${{ env.DATE_TAG }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./calamares_${{ env.DATE_TAG }}.tar.gz
+          asset_name: calamares_${{ env.DATE_TAG }}.tar.gz
+          asset_content_type: application/gzip
