@@ -15,12 +15,13 @@ jobs:
           echo "DATE_TAG=$(date +'%Y-%m-%d_%H-%M-%S')" >> $GITHUB_ENV
           echo "DATE_TITLE=$(date +'%Y-%m-%d %H:%M:%S GMT+1')" >> $GITHUB_ENV
 
-      - name: Install dependencies (Full Qt5 + KDE)
+      - name: Install dependencies (Full Qt5 + KDE + Missing packages)
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             git cmake ninja-build extra-cmake-modules gettext pkg-config \
             qtbase5-dev qtdeclarative5-dev qttools5-dev qttools5-dev-tools \
+            qtsvg5-dev qtwebengine5-dev qtquickcontrols2-5-dev \
             qml-module-qtquick-controls qml-module-qtquick-controls2 \
             qml-module-qtquick-layouts qml-module-qtquick-window2 qml-module-qtgraphicaleffects \
             libkf5config-dev libkf5coreaddons-dev libkf5i18n-dev libkf5iconthemes-dev \
@@ -29,44 +30,79 @@ jobs:
             libpolkit-qt5-1-dev libyaml-cpp-dev libboost-all-dev \
             python3-dev python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtquick python3-yaml \
             libappstreamqt-dev libpwquality-dev libnm-dev libcryptsetup-dev libparted-dev \
+            libkpmcore-dev libatasmart-dev \
             os-prober rsync squashfs-tools dosfstools e2fsprogs btrfs-progs xfsprogs \
-            f2fs-tools jfsutils reiserfsprogs nilfs-tools udftools
+            f2fs-tools jfsutils reiserfsprogs nilfs-tools udftools \
+            libxml2-dev libxmlb-dev
 
-      - name: Clone Calamares from Codeberg
-        run: git clone --recursive https://codeberg.org/calamares/calamares.git
+      - name: Clone Calamares from Codeberg (with submodules)
+        run: |
+          git clone --recursive https://codeberg.org/calamares/calamares.git
+          cd calamares
+          git submodule update --init --recursive
 
       - name: Build & install Calamares (Qt5 Full)
         run: |
           cd calamares
           mkdir build && cd build
+          export INSTALL_DIR="/tmp/calamares-install"
           cmake -G Ninja \
-            -DWITH_ALL_MODULES=ON \
             -DWITH_QT6=OFF \
             -DWITH_PYTHON=ON \
             -DWITH_PYBIND11=ON \
             -DWITH_QML=ON \
             -DINSTALL_CONFIG=ON \
             -DINSTALL_POLKIT=ON \
+            -DINSTALL_COMPLETION=ON \
             -DBUILD_CRASH_REPORTING=ON \
             -DBUILD_SCHEMA_TESTING=ON \
+            -DBUILD_APPDATA=ON \
+            -DBUILD_APPSTREAM=ON \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=/tmp/calamares \
+            -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
+            -DSKIP_MODULES="" \
             ..
-          ninja
+          ninja -j$(nproc)
           ninja install
 
-      - name: Package install directory
-        run: tar -czf calamares-${{ env.DATE_TAG }}.tar.gz -C /tmp/calamares .
+      - name: Package install directory with submodules
+        run: |
+          export INSTALL_DIR="/tmp/calamares-install"
+          tar -czf calamares-full-${{ env.DATE_TAG }}.tar.gz -C "$INSTALL_DIR" .
+
+      - name: Create build info file
+        run: |
+          cat > build-info.txt << EOF
+          Build Date: ${{ env.DATE_TITLE }}
+          Calamares Version: $(cd calamares && git describe --tags --always)
+          Qt Version: 5.x (Full Qt5 build)
+          Features:
+          - Python modules (pybind11)
+          - QML UI support
+          - All available modules
+          - Crash reporting (KCrash)
+          - Polkit integration
+          - Schema validation
+          - AppData/AppStream support
+          - Shell completion
+          - Full submodule support
+          
+          Installation:
+          1. Extract archive: tar -xzf calamares-full-*.tar.gz
+          2. Copy to system: sudo cp -r * /usr/local/
+          3. Run: calamares
+          EOF
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ env.DATE_TAG }}
-          name: "${{ env.DATE_TITLE }} build"
-          body: "Automated full-featured Qt5 Calamares build"
-          files: calamares-${{ env.DATE_TAG }}.tar.gz
+          tag_name: calamares-full-${{ env.DATE_TAG }}
+          name: "Full Calamares Qt5 Build - ${{ env.DATE_TITLE }}"
+          files: |
+            calamares-full-${{ env.DATE_TAG }}.tar.gz
+            build-info.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cleanup runner
-        run: sudo rm -rf /tmp/* ~/calamares ~/work
+        run: sudo rm -rf /tmp/* ~/calamares ~/work-r
